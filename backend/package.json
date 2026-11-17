@@ -1,0 +1,20 @@
+{
+  "name": "backend",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Supabase backend (Postgres, Auth, Storage, Edge Functions) for the QR check-in system. Run all commands from this folder.",
+  "scripts": {
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:status": "supabase status",
+    "db:reset": "supabase db reset",
+    "types": "supabase gen types typescript --local > ../frontend/src/app/core/models/database.types.ts",
+    "functions:serve": "supabase functions serve --env-file supabase/functions/.env",
+    "link": "supabase link",
+    "db:push": "supabase db push",
+    "functions:deploy": "supabase functions deploy send-ticket"
+  },
+  "devDependencies": {
+    "supabase": "^3.2.0"
+  }
+}

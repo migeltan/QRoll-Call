@@ -1,0 +1,19 @@
+-- Owner: Role 2 (Database / Supabase)
+-- The two Postgres functions the frontend calls. Names, arguments and return values are the
+-- contract in docs/CONTRACTS.md (Roles 4 and 5 are building against them).
+--
+-- TODO(role-2):
+--   1) register_attendee(p_full_name text, p_email text, p_organization text, p_contact_number text)
+--        returns uuid                       -- the new attendee id
+--      - security definer, granted to anon + authenticated
+--      - validates required fields, inserts the row, returns id
+--      - duplicate email -> let the unique violation (23505) bubble up
+--
+--   2) check_in(p_token text) returns jsonb
+--      - security definer, granted to authenticated ONLY, and must require public.is_staff()
+--      - returns one of:
+--          {"status": "checked_in",         "attendee": {"full_name", "organization", "checked_in_at"}}
+--          {"status": "already_checked_in", "attendee": {"full_name", "organization", "checked_in_at"}}
+--          {"status": "invalid_token",      "attendee": null}
+--      - on success set status = 'checked_in', checked_in_at = now(), checked_in_by = auth.uid()
+--      - a second scan must NOT change checked_in_at

@@ -1,0 +1,12 @@
+-- Owner: Role 2 (Database / Supabase)
+-- Row-Level Security for public.attendees. Depends on public.is_staff() from Role 5's migration
+-- (20261117000002_staff_roles.sql), which runs before this file.
+--
+-- Rules (see docs/CONTRACTS.md):
+--   * The public (anon) can NOT read or write attendees directly - they only call register_attendee().
+--   * Logged-in staff (is_staff()) can read all attendees.
+--   * Nobody updates rows directly from the browser; check-in goes through check_in().
+--
+-- TODO(role-2):
+--   create policy "staff can read attendees" on public.attendees
+--     for select to authenticated using (public.is_staff());

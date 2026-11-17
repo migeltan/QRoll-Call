@@ -1,0 +1,21 @@
+# Dependencies and build output
+node_modules/
+dist/
+.angular/
+out-tsc/
+
+# Secrets - never commit
+.env
+.env.*
+!.env.example
+
+# Editors / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

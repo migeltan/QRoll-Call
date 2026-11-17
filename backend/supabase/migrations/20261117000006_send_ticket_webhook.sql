@@ -1,0 +1,16 @@
+-- Owner: Role 3 (QR Generation + Email Automation)
+-- Database Webhook: when a row is inserted into public.attendees, call the `send-ticket`
+-- Edge Function so a QR code is generated and emailed automatically.
+--
+-- TODO(role-3):
+--   create trigger send_ticket_on_insert
+--     after insert on public.attendees
+--     for each row execute function supabase_functions.http_request(
+--       'http://host.docker.internal:54321/functions/v1/send-ticket',   -- local URL
+--       'POST',
+--       '{"Content-Type":"application/json","x-webhook-secret":"<same value as WEBHOOK_SECRET>"}',
+--       '{}',
+--       '5000'
+--     );
+--   -- For the hosted project, create the same webhook from the Supabase dashboard
+--   -- (Database -> Webhooks) pointing at the deployed function URL, and document it in docs/.

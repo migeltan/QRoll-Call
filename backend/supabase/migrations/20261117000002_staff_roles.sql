@@ -1,0 +1,17 @@
+-- Owner: Role 5 (Staff Auth + Check-in Scanner) - the ONLY backend file Role 5 edits.
+-- Defines who counts as "staff". Role 2's policies and check_in() call public.is_staff(),
+-- so keep that function name and signature exactly.
+--
+-- TODO(role-5):
+--   create table public.staff_profiles (
+--     user_id uuid primary key references auth.users (id) on delete cascade,
+--     role    text not null default 'staff' check (role in ('staff', 'organizer'))
+--   );
+--   alter table public.staff_profiles enable row level security;
+--
+--   create function public.is_staff() returns boolean
+--     language sql stable security definer set search_path = ''
+--     as $$ select exists (select 1 from public.staff_profiles where user_id = auth.uid()) $$;
+--
+--   -- Decide how accounts become staff (e.g. the Lead creates users in Supabase Studio and you
+--   -- insert their ids into staff_profiles). Document the steps in docs/CONTRACTS.md.

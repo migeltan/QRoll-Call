@@ -1,0 +1,9 @@
+-- Owner: Role 2 (Database / Supabase)
+-- Storage bucket that holds one QR image per attendee (written by Role 3's Edge Function
+-- with the service role, read by email clients through a public URL).
+--
+-- TODO(role-2):
+--   insert into storage.buckets (id, name, public) values ('qr-codes', 'qr-codes', true)
+--     on conflict (id) do nothing;
+--   -- Files are named <qr_token>.png so the URL is unguessable. Public READ only;
+--   -- no insert/update/delete policies for anon or authenticated (service role bypasses RLS).

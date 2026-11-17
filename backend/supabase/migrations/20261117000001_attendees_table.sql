@@ -1,0 +1,20 @@
+-- Owner: Role 2 (Database / Supabase)
+-- Stage 2: the attendees table. The column list is the contract in docs/CONTRACTS.md -
+-- if you must change it, tell Roles 3, 4 and 5 first.
+--
+-- TODO(role-2):
+--   create table public.attendees (
+--     id              uuid primary key default gen_random_uuid(),
+--     full_name       text not null,
+--     email           text not null,            -- unique, case-insensitive (lower(email))
+--     organization    text not null,
+--     contact_number  text not null,
+--     qr_token        uuid not null unique default gen_random_uuid(),  -- what the QR encodes (NOT the email)
+--     qr_image_path   text,                     -- path inside the `qr-codes` storage bucket (set by Role 3)
+--     email_sent_at   timestamptz,              -- set by Role 3 after the ticket email goes out
+--     status          text not null default 'registered' check (status in ('registered', 'checked_in')),
+--     checked_in_at   timestamptz,
+--     checked_in_by   uuid references auth.users (id),
+--     created_at      timestamptz not null default now()
+--   );
+--   alter table public.attendees enable row level security;

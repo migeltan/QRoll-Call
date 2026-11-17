@@ -1,0 +1,50 @@
+# Replace the placeholders with GitHub usernames by running:
+#   ./scripts/set-codeowners.sh <role1> <role2> <role3> <role4> <role5>
+# Last matching line wins. Each role file lists its owner plus the Lead, so the Lead can always review.
+
+# Default: the Lead
+*                                                   @ROLE1
+
+# Role 1 - Lead / DevOps / Integration
+/.github/                                           @ROLE1
+/docs/                                              @ROLE1
+/scripts/                                           @ROLE1
+/frontend/src/environments/                         @ROLE1
+/backend/package.json                               @ROLE1
+/backend/supabase/config.toml                       @ROLE1
+# Anyone may append to the shared test log
+/docs/TEST_LOG.md
+
+# Role 2 - Database / Supabase
+/backend/supabase/migrations/20261117000001_attendees_table.sql   @ROLE2 @ROLE1
+/backend/supabase/migrations/20261117000003_attendee_policies.sql @ROLE2 @ROLE1
+/backend/supabase/migrations/20261117000004_rpc_functions.sql     @ROLE2 @ROLE1
+/backend/supabase/migrations/20261117000005_storage_qr_codes.sql  @ROLE2 @ROLE1
+/backend/supabase/seed.sql                                        @ROLE2 @ROLE1
+/frontend/src/app/core/models/database.types.ts                   @ROLE2 @ROLE1
+
+# Role 3 - QR Generation + Email Automation
+/backend/supabase/functions/                                      @ROLE3 @ROLE1
+/backend/supabase/migrations/20261117000006_send_ticket_webhook.sql @ROLE3 @ROLE1
+
+# Role 4 - Registration Form + App Shell
+/frontend/src/app/features/register/                @ROLE4 @ROLE1
+/frontend/src/app/shared/                           @ROLE4 @ROLE1
+/frontend/src/app/core/supabase/                    @ROLE4 @ROLE1
+/frontend/src/app/core/services/registration.service.ts @ROLE4 @ROLE1
+/frontend/src/app/app.*                             @ROLE4 @ROLE1
+/frontend/src/main.ts                               @ROLE4 @ROLE1
+/frontend/src/index.html                            @ROLE4 @ROLE1
+/frontend/src/styles.scss                           @ROLE4 @ROLE1
+/frontend/public/                                   @ROLE4 @ROLE1
+
+# Role 5 - Staff Auth + Check-in Scanner
+/frontend/src/app/features/auth/                    @ROLE5 @ROLE1
+/frontend/src/app/features/checkin/                 @ROLE5 @ROLE1
+/frontend/src/app/features/attendees/               @ROLE5 @ROLE1
+/frontend/src/app/features/staff/                   @ROLE5 @ROLE1
+/frontend/src/app/core/auth/                        @ROLE5 @ROLE1
+/frontend/src/app/core/models/check-in.model.ts     @ROLE5 @ROLE1
+/frontend/src/app/core/services/checkin.service.ts  @ROLE5 @ROLE1
+/frontend/src/app/core/services/attendees.service.ts @ROLE5 @ROLE1
+/backend/supabase/migrations/20261117000002_staff_roles.sql @ROLE5 @ROLE1
