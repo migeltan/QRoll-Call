@@ -71,7 +71,7 @@ node scripts/check-ownership.mjs origin/main $(git branch --show-current)
 ## Lead checklist (before sharing the repo)
 1. `./scripts/create-github-repo.sh <repo-name>` creates the repo, pushes all branches, protects `main`.
 2. Invite the four teammates as collaborators.
-3. `./scripts/set-codeowners.sh <role1> <role2> <role3> <role4> <role5>` (GitHub usernames), commit on `role/lead-devops`, merge to `main`.
+3. `node scripts/set-codeowners.mjs <role1> <role2> <role3> <role4> <role5>` (GitHub usernames), commit on `role/lead-devops`, merge to `main`.
 4. Run `npm run db:start` + `npm run db:status` once, paste the local anon key into `frontend/src/environments/environment.development.ts`, and merge to `main`. Local keys are the same for everyone using the same CLI version, so teammates then need no setup.
 5. Create the hosted Supabase project, fill `environment.ts` with its URL and anon key, and connect Cloudflare Pages or Vercel (build command `npm run build`, root `frontend`, output `dist/frontend/browser`).
 6. Decide the email provider (Resend with a verified domain, or Gmail SMTP) and tell Role 3.

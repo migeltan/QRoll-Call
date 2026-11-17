@@ -1,5 +1,5 @@
 # Replace the placeholders with GitHub usernames by running:
-#   ./scripts/set-codeowners.sh <role1> <role2> <role3> <role4> <role5>
+#   node scripts/set-codeowners.mjs <role1> <role2> <role3> <role4> <role5>
 # Last matching line wins. Each role file lists its owner plus the Lead, so the Lead can always review.
 
 # Default: the Lead
