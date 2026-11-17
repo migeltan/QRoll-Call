@@ -6,5 +6,5 @@
 export const environment = {
   production: false,
   supabaseUrl: 'http://127.0.0.1:54321',
-  supabaseAnonKey: 'PASTE_LOCAL_ANON_KEY_HERE',
+  supabaseAnonKey: 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH',
 };
