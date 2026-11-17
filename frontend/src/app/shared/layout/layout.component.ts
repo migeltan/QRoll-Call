@@ -8,15 +8,22 @@ import { MatToolbarModule } from '@angular/material/toolbar';
   imports: [RouterOutlet, RouterLink, MatToolbarModule],
   template: `
     <mat-toolbar color="primary">
-      <a routerLink="/" class="brand">Event Check-in</a>
+      <a routerLink="/" class="brand">QRoll Call</a>
     </mat-toolbar>
     <main class="page">
       <router-outlet />
     </main>
   `,
   styles: `
-    .brand { color: inherit; text-decoration: none; }
-    .page { max-width: 960px; margin: 0 auto; padding: 16px; }
+    .brand {
+      color: inherit;
+      text-decoration: none;
+    }
+    .page {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 16px;
+    }
   `,
 })
 export class LayoutComponent {}
