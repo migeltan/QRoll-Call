@@ -1,20 +1,21 @@
--- Owner: Role 2 (Database / Supabase)
--- Stage 2: the attendees table. The column list is the contract in docs/CONTRACTS.md -
--- if you must change it, tell Roles 3, 4 and 5 first.
---
--- TODO(role-2):
---   create table public.attendees (
---     id              uuid primary key default gen_random_uuid(),
---     full_name       text not null,
---     email           text not null,            -- unique, case-insensitive (lower(email))
---     organization    text not null,
---     contact_number  text not null,
---     qr_token        uuid not null unique default gen_random_uuid(),  -- what the QR encodes (NOT the email)
---     qr_image_path   text,                     -- path inside the `qr-codes` storage bucket (set by Role 3)
---     email_sent_at   timestamptz,              -- set by Role 3 after the ticket email goes out
---     status          text not null default 'registered' check (status in ('registered', 'checked_in')),
---     checked_in_at   timestamptz,
---     checked_in_by   uuid references auth.users (id),
---     created_at      timestamptz not null default now()
---   );
---   alter table public.attendees enable row level security;
+create table public.attendees (
+  id             uuid primary key default gen_random_uuid(),
+  full_name      text not null check (char_length(trim(full_name)) between 2 and 120),
+  email          text not null check (email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$' and char_length(email) <= 254),
+  organization   text not null check (char_length(trim(organization)) between 1 and 120),
+  contact_number text not null check (char_length(trim(contact_number)) between 7 and 20),
+  qr_token       uuid not null unique default gen_random_uuid(),
+  qr_image_path  text,
+  email_sent_at  timestamptz,
+  status         text not null default 'registered'
+                 check (status in ('registered', 'checked_in')),
+  checked_in_at  timestamptz,
+  checked_in_by  uuid references auth.users (id) on delete set null,
+  created_at     timestamptz not null default now()
+);
+
+comment on table public.attendees is 'Seminar registrants. Public can only insert via register_attendee(); staff read and check in.';
+
+-- Unique email, case-insensitive
+create unique index attendees_email_unique on public.attendees (lower(email));
+create index attendees_status_idx on public.attendees (status);

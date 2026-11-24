@@ -1,9 +1,9 @@
--- Owner: Role 2 (Database / Supabase)
--- Storage bucket that holds one QR image per attendee (written by Role 3's Edge Function
--- with the service role, read by email clients through a public URL).
---
--- TODO(role-2):
---   insert into storage.buckets (id, name, public) values ('qr-codes', 'qr-codes', true)
---     on conflict (id) do nothing;
---   -- Files are named <qr_token>.png so the URL is unguessable. Public READ only;
---   -- no insert/update/delete policies for anon or authenticated (service role bypasses RLS).
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('qr-codes', 'qr-codes', true, 1048576, array['image/png'])
+on conflict (id) do nothing;
+
+-- Public bucket: anyone with the exact URL can view an image.
+-- Files are named <qr_token>.png, so names are unguessable.
+-- No select policy exists, so nobody can list the bucket's contents.
+-- Uploads come only from the Edge Function (service role key),
+-- so no insert policy is created for anon or authenticated.

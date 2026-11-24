@@ -1,7 +1,6 @@
--- Owner: Role 2 (Database / Supabase)
--- Runs on every `npm run db:reset`. Put a few TEST attendees here (fake names, use your own
--- inbox for the email column when testing Stage 3). Never put real attendee data in this file.
---
--- TODO(role-2):
---   insert into public.attendees (full_name, email, organization, contact_number) values
---     ('Test Attendee One', 'test1@example.com', 'Test Org', '09170000001');
+insert into public.attendees (full_name, email, organization, contact_number, qr_token)
+values
+  ('Test Attendee One',   'test1@example.com', 'PUP CCIS', '09171234567', '00000000-0000-0000-0000-00000000000a'),
+  ('Test Attendee Two',   'test2@example.com', 'PUP CCIS', '09181234567', '00000000-0000-0000-0000-00000000000b'),
+  ('Test Attendee Three', 'test3@example.com', 'PUP CCIS', '09191234567', '00000000-0000-0000-0000-00000000000c')
+on conflict do nothing;
