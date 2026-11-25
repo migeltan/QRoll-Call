@@ -14,23 +14,53 @@ import type { CheckInResult } from '../../core/models/check-in.model';
 @Component({
   selector: 'app-checkin',
   imports: [FormsModule, DatePipe, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule],
+  styles: [
+    `
+      .page { max-width: 480px; margin: 0 auto; padding: 16px; }
+      .nav { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+      .reader { width: 100%; min-height: 80px; border-radius: 8px; overflow: hidden; }
+      .notice { margin: 12px 0; padding: 12px; border-radius: 8px; background: #fff3e0; color: #7a4a00; }
+      .error { margin: 12px 0; color: #b00020; }
+      .busy { margin: 12px 0; font-weight: 500; }
+      .result { margin: 16px 0; padding: 16px; border-radius: 8px; color: #fff; }
+      .result h3 { margin: 0 0 4px; font-size: 1.4rem; }
+      .result p { margin: 2px 0; }
+      .ok { background: #2e7d32; }
+      .dup { background: #c25e00; }
+      .bad { background: #c62828; }
+      .result button { margin-top: 12px; }
+      .manual { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+      .manual mat-form-field { flex: 1 1 200px; }
+    `,
+  ],
   template: `
-    <div style="max-width: 480px; margin: 16px auto; padding: 0 16px">
-      <nav style="display: flex; gap: 8px; margin-bottom: 8px">
+    <div class="page">
+      <nav class="nav">
         <a mat-button routerLink="/staff/checkin">Check-in</a>
         <a mat-button routerLink="/staff/attendees">Attendees</a>
         <button mat-button type="button" (click)="logout()">Sign out</button>
       </nav>
 
       <h2>Check-in</h2>
-      <div id="qr-reader" style="width: 100%"></div>
 
+      @if (offline()) {
+        <p class="notice">
+          You're offline. Check-ins won't work until the connection is back. Use the exported
+          attendee list as a backup.
+        </p>
+      }
+
+      <div id="qr-reader" class="reader"></div>
+
+      @if (busy()) {
+        <p class="busy">Checking…</p>
+      }
       @if (error()) {
-        <p style="color: #b00020">{{ error() }}</p>
+        <p class="error">{{ error() }}</p>
       }
 
       @if (result(); as r) {
-        <div [style.background]="color(r)" style="padding: 16px; border-radius: 8px; margin: 16px 0; color: #fff">
+        <div class="result" [class.ok]="r.status === 'checked_in'" [class.dup]="r.status === 'already_checked_in'" [class.bad]="r.status === 'invalid_token'">
           @switch (r.status) {
             @case ('checked_in') {
               <h3>Checked In</h3>
@@ -46,12 +76,15 @@ import type { CheckInResult } from '../../core/models/check-in.model';
               <p>No attendee matches this code.</p>
             }
           }
+          <button mat-stroked-button type="button" style="color: #fff; border-color: #fff" (click)="result.set(null)">
+            Scan next
+          </button>
         </div>
       }
 
       <p>No camera? Type the token, or use a USB scanner:</p>
-      <form (ngSubmit)="submitManual()" style="display: flex; gap: 8px">
-        <mat-form-field style="flex: 1">
+      <form class="manual" (ngSubmit)="submitManual()">
+        <mat-form-field>
           <mat-label>Token</mat-label>
           <input matInput name="token" [(ngModel)]="manualToken" autocomplete="off" />
         </mat-form-field>
@@ -71,7 +104,11 @@ export class CheckinComponent implements AfterViewInit, OnDestroy {
   readonly result = signal<CheckInResult | null>(null);
   readonly error = signal('');
   readonly busy = signal(false);
+  readonly offline = signal(typeof navigator !== 'undefined' && !navigator.onLine);
   manualToken = '';
+
+  private readonly onOnline = () => this.offline.set(false);
+  private readonly onOffline = () => this.offline.set(true);
 
   async logout() {
     await this.auth.signOut();
@@ -79,6 +116,8 @@ export class CheckinComponent implements AfterViewInit, OnDestroy {
   }
 
   async ngAfterViewInit() {
+    window.addEventListener('online', this.onOnline);
+    window.addEventListener('offline', this.onOffline);
     this.scanner = new Html5Qrcode('qr-reader');
     try {
       await this.scanner.start(
@@ -93,15 +132,13 @@ export class CheckinComponent implements AfterViewInit, OnDestroy {
   }
 
   async ngOnDestroy() {
+    window.removeEventListener('online', this.onOnline);
+    window.removeEventListener('offline', this.onOffline);
     try {
       if (this.scanner?.isScanning) await this.scanner.stop();
     } catch {
       /* ignore */
     }
-  }
-
-  color(r: CheckInResult) {
-    return r.status === 'checked_in' ? '#2e7d32' : r.status === 'already_checked_in' ? '#ed6c02' : '#c62828';
   }
 
   submitManual() {
@@ -119,9 +156,13 @@ export class CheckinComponent implements AfterViewInit, OnDestroy {
     this.busy.set(true);
     this.error.set('');
     try {
-      this.result.set(await this.checkin.checkIn(token));
+      const res = await this.checkin.checkIn(token);
+      this.result.set(res);
+      navigator.vibrate?.(res.status === 'checked_in' ? 100 : [100, 80, 100]);
     } catch {
-      this.error.set('Could not reach the server. Try again.');
+      this.error.set(
+        this.offline() ? "You're offline. Try again when the connection is back." : 'Could not reach the server. Try again.',
+      );
     } finally {
       this.busy.set(false);
     }

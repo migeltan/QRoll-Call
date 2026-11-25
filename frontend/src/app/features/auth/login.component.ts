@@ -11,10 +11,20 @@ import { AuthService } from '../../core/auth/auth.service';
 @Component({
   selector: 'app-login',
   imports: [ReactiveFormsModule, MatButtonModule, MatCardModule, MatFormFieldModule, MatInputModule],
+  styles: [
+    `
+      mat-card { max-width: 400px; margin: 32px 16px; padding: 16px; }
+      @media (min-width: 440px) { mat-card { margin: 48px auto; } }
+      form { display: grid; gap: 8px; margin-top: 16px; }
+      .hint { margin: 4px 0 0; color: #666; }
+      .error { margin: 0; color: #b00020; }
+    `,
+  ],
   template: `
-    <mat-card style="max-width: 400px; margin: 48px auto; padding: 16px">
+    <mat-card>
       <mat-card-title>Staff login</mat-card-title>
-      <form [formGroup]="form" (ngSubmit)="submit()" style="display: grid; gap: 8px; margin-top: 16px">
+      <p class="hint">For organizers and check-in staff only.</p>
+      <form [formGroup]="form" (ngSubmit)="submit()">
         <mat-form-field>
           <mat-label>Email</mat-label>
           <input matInput type="email" formControlName="email" autocomplete="username" />
@@ -30,7 +40,7 @@ import { AuthService } from '../../core/auth/auth.service';
           }
         </mat-form-field>
         @if (error()) {
-          <p style="color: #b00020">{{ error() }}</p>
+          <p class="error">{{ error() }}</p>
         }
         <button mat-flat-button type="submit" [disabled]="loading()">
           {{ loading() ? 'Signing in…' : 'Sign in' }}

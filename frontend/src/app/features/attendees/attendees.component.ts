@@ -12,9 +12,21 @@ import { Attendee, AttendeesService } from '../../core/services/attendees.servic
 @Component({
   selector: 'app-attendees',
   imports: [DatePipe, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule, MatTableModule],
+  styles: [
+    `
+      .page { max-width: 1000px; margin: 0 auto; padding: 16px; }
+      .nav { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+      .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+      .toolbar mat-form-field { flex: 1 1 240px; }
+      .scroll { overflow-x: auto; }
+      table { width: 100%; min-width: 720px; }
+      .error { color: #b00020; }
+      .muted { color: #666; padding: 24px 0; text-align: center; }
+    `,
+  ],
   template: `
-    <div style="max-width: 1000px; margin: 16px auto; padding: 0 16px">
-      <nav style="display: flex; gap: 8px; margin-bottom: 8px">
+    <div class="page">
+      <nav class="nav">
         <a mat-button routerLink="/staff/checkin">Check-in</a>
         <a mat-button routerLink="/staff/attendees">Attendees</a>
         <button mat-button type="button" (click)="logout()">Sign out</button>
@@ -23,49 +35,59 @@ import { Attendee, AttendeesService } from '../../core/services/attendees.servic
       <h2>Attendees</h2>
       <p>{{ checkedIn() }} of {{ rows().length }} checked in</p>
 
-      <div style="display: flex; gap: 8px; align-items: center">
-        <mat-form-field style="flex: 1">
+      <div class="toolbar">
+        <mat-form-field>
           <mat-label>Search name, email or organization</mat-label>
           <input matInput [value]="query()" (input)="query.set($any($event.target).value)" />
         </mat-form-field>
-        <button mat-stroked-button type="button" (click)="reload()">Refresh</button>
+        <button mat-stroked-button type="button" (click)="reload()" [disabled]="loading()">Refresh</button>
         <button mat-flat-button type="button" (click)="exportCsv()" [disabled]="!rows().length">
           Export CSV
         </button>
       </div>
 
       @if (error()) {
-        <p style="color: #b00020">{{ error() }}</p>
+        <p class="error">{{ error() }}</p>
       }
 
-      <table mat-table [dataSource]="filtered()" style="width: 100%">
-        <ng-container matColumnDef="full_name">
-          <th mat-header-cell *matHeaderCellDef>Name</th>
-          <td mat-cell *matCellDef="let r">{{ r.full_name }}</td>
-        </ng-container>
-        <ng-container matColumnDef="email">
-          <th mat-header-cell *matHeaderCellDef>Email</th>
-          <td mat-cell *matCellDef="let r">{{ r.email }}</td>
-        </ng-container>
-        <ng-container matColumnDef="organization">
-          <th mat-header-cell *matHeaderCellDef>Organization</th>
-          <td mat-cell *matCellDef="let r">{{ r.organization }}</td>
-        </ng-container>
-        <ng-container matColumnDef="contact_number">
-          <th mat-header-cell *matHeaderCellDef>Contact</th>
-          <td mat-cell *matCellDef="let r">{{ r.contact_number }}</td>
-        </ng-container>
-        <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef>Status</th>
-          <td mat-cell *matCellDef="let r">{{ r.status === 'checked_in' ? 'Checked In' : 'Registered' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="checked_in_at">
-          <th mat-header-cell *matHeaderCellDef>Checked in at</th>
-          <td mat-cell *matCellDef="let r">{{ r.checked_in_at ? (r.checked_in_at | date: 'short') : '' }}</td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="columns"></tr>
-        <tr mat-row *matRowDef="let row; columns: columns"></tr>
-      </table>
+      @if (loading()) {
+        <p class="muted">Loading attendees…</p>
+      } @else if (!rows().length && !error()) {
+        <p class="muted">No attendees have registered yet.</p>
+      } @else if (!filtered().length) {
+        <p class="muted">No attendees match your search.</p>
+      } @else {
+        <div class="scroll">
+          <table mat-table [dataSource]="filtered()">
+            <ng-container matColumnDef="full_name">
+              <th mat-header-cell *matHeaderCellDef>Name</th>
+              <td mat-cell *matCellDef="let r">{{ r.full_name }}</td>
+            </ng-container>
+            <ng-container matColumnDef="email">
+              <th mat-header-cell *matHeaderCellDef>Email</th>
+              <td mat-cell *matCellDef="let r">{{ r.email }}</td>
+            </ng-container>
+            <ng-container matColumnDef="organization">
+              <th mat-header-cell *matHeaderCellDef>Organization</th>
+              <td mat-cell *matCellDef="let r">{{ r.organization }}</td>
+            </ng-container>
+            <ng-container matColumnDef="contact_number">
+              <th mat-header-cell *matHeaderCellDef>Contact</th>
+              <td mat-cell *matCellDef="let r">{{ r.contact_number }}</td>
+            </ng-container>
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef>Status</th>
+              <td mat-cell *matCellDef="let r">{{ r.status === 'checked_in' ? 'Checked In' : 'Registered' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="checked_in_at">
+              <th mat-header-cell *matHeaderCellDef>Checked in at</th>
+              <td mat-cell *matCellDef="let r">{{ r.checked_in_at ? (r.checked_in_at | date: 'short') : '' }}</td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="columns"></tr>
+            <tr mat-row *matRowDef="let row; columns: columns"></tr>
+          </table>
+        </div>
+      }
     </div>
   `,
 })
@@ -78,6 +100,7 @@ export class AttendeesComponent implements OnInit {
   readonly rows = signal<Attendee[]>([]);
   readonly query = signal('');
   readonly error = signal('');
+  readonly loading = signal(false);
 
   readonly filtered = computed(() => {
     const q = this.query().trim().toLowerCase();
@@ -99,10 +122,13 @@ export class AttendeesComponent implements OnInit {
 
   async reload() {
     this.error.set('');
+    this.loading.set(true);
     try {
       this.rows.set(await this.service.list());
     } catch {
-      this.error.set('Could not load attendees.');
+      this.error.set('Could not load attendees. Check your connection and press Refresh.');
+    } finally {
+      this.loading.set(false);
     }
   }
 

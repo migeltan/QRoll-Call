@@ -41,9 +41,8 @@ export class AuthService {
   }
 
   private async isStaff(): Promise<boolean> {
-    // TODO(role-5): remove this comment once database.types.ts includes is_staff
-    // @ts-expect-error is_staff is not in the generated types yet
-    const { data, error } = await supabase.rpc('is_staff');
-    return !error && data === true;
+    // 'is_staff' is cast because database.types.ts may not list it yet.
+    const { data, error } = await supabase.rpc('is_staff' as never);
+    return !error && (data as unknown) === true;
   }
 }
