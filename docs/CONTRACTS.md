@@ -46,4 +46,10 @@ Callable by `anon`. A duplicate email raises Postgres error code `23505`.
 Migrations run in filename order: `01` table (Role 2) → `02` staff roles (Role 5) → `03` policies (Role 2) → `04` functions (Role 2) → `05` storage (Role 2) → `06` webhook (Role 3).
 
 ## Staff accounts
-_Role 5: document here how an account becomes staff (e.g. Lead creates the user in Supabase Studio, then you add their id to `staff_profiles`)._
+The Lead creates the user in Supabase Studio (Authentication > Users), then runs this in the SQL editor:
+
+```sql
+insert into public.staff_profiles (user_id, role) values ('<user-id>', 'staff');
+```
+
+Use role `'organizer'` for people who manage the attendee list. Staff log in at `/staff/login`.
