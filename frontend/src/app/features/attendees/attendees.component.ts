@@ -1,11 +1,104 @@
 // Owner: Role 5 (Staff Auth + Check-in Scanner).
-import { Component } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatTableModule } from '@angular/material/table';
+import { Attendee, AttendeesService } from '../../core/services/attendees.service';
 
 @Component({
   selector: 'app-attendees',
+  imports: [DatePipe, MatButtonModule, MatFormFieldModule, MatInputModule, MatTableModule],
   template: `
-    <h1>Attendees</h1>
-    <p>TODO(role-5): Material table with search, status, and a "Download CSV" button.</p>
+    <div style="max-width: 1000px; margin: 16px auto; padding: 0 16px">
+      <h2>Attendees</h2>
+      <p>{{ checkedIn() }} of {{ rows().length }} checked in</p>
+
+      <div style="display: flex; gap: 8px; align-items: center">
+        <mat-form-field style="flex: 1">
+          <mat-label>Search name, email or organization</mat-label>
+          <input matInput [value]="query()" (input)="query.set($any($event.target).value)" />
+        </mat-form-field>
+        <button mat-stroked-button type="button" (click)="reload()">Refresh</button>
+        <button mat-flat-button type="button" (click)="exportCsv()" [disabled]="!rows().length">
+          Export CSV
+        </button>
+      </div>
+
+      @if (error()) {
+        <p style="color: #b00020">{{ error() }}</p>
+      }
+
+      <table mat-table [dataSource]="filtered()" style="width: 100%">
+        <ng-container matColumnDef="full_name">
+          <th mat-header-cell *matHeaderCellDef>Name</th>
+          <td mat-cell *matCellDef="let r">{{ r.full_name }}</td>
+        </ng-container>
+        <ng-container matColumnDef="email">
+          <th mat-header-cell *matHeaderCellDef>Email</th>
+          <td mat-cell *matCellDef="let r">{{ r.email }}</td>
+        </ng-container>
+        <ng-container matColumnDef="organization">
+          <th mat-header-cell *matHeaderCellDef>Organization</th>
+          <td mat-cell *matCellDef="let r">{{ r.organization }}</td>
+        </ng-container>
+        <ng-container matColumnDef="contact_number">
+          <th mat-header-cell *matHeaderCellDef>Contact</th>
+          <td mat-cell *matCellDef="let r">{{ r.contact_number }}</td>
+        </ng-container>
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let r">{{ r.status === 'checked_in' ? 'Checked In' : 'Registered' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="checked_in_at">
+          <th mat-header-cell *matHeaderCellDef>Checked in at</th>
+          <td mat-cell *matCellDef="let r">{{ r.checked_in_at ? (r.checked_in_at | date: 'short') : '' }}</td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+      </table>
+    </div>
   `,
 })
-export class AttendeesComponent {}
+export class AttendeesComponent implements OnInit {
+  private readonly service = inject(AttendeesService);
+
+  readonly columns = ['full_name', 'email', 'organization', 'contact_number', 'status', 'checked_in_at'];
+  readonly rows = signal<Attendee[]>([]);
+  readonly query = signal('');
+  readonly error = signal('');
+
+  readonly filtered = computed(() => {
+    const q = this.query().trim().toLowerCase();
+    if (!q) return this.rows();
+    return this.rows().filter((r) =>
+      [r.full_name, r.email, r.organization].some((v) => v.toLowerCase().includes(q)),
+    );
+  });
+  readonly checkedIn = computed(() => this.rows().filter((r) => r.status === 'checked_in').length);
+
+  ngOnInit() {
+    void this.reload();
+  }
+
+  async reload() {
+    this.error.set('');
+    try {
+      this.rows.set(await this.service.list());
+    } catch {
+      this.error.set('Could not load attendees.');
+    }
+  }
+
+  exportCsv() {
+    const csv = this.service.toCsv(this.rows());
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'attendees.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+}
