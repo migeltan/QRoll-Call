@@ -2,18 +2,26 @@
 import { AfterViewInit, Component, OnDestroy, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
 import { Html5Qrcode } from 'html5-qrcode';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { AuthService } from '../../core/auth/auth.service';
 import { CheckinService } from '../../core/services/checkin.service';
 import type { CheckInResult } from '../../core/models/check-in.model';
 
 @Component({
   selector: 'app-checkin',
-  imports: [FormsModule, DatePipe, MatButtonModule, MatFormFieldModule, MatInputModule],
+  imports: [FormsModule, DatePipe, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule],
   template: `
     <div style="max-width: 480px; margin: 16px auto; padding: 0 16px">
+      <nav style="display: flex; gap: 8px; margin-bottom: 8px">
+        <a mat-button routerLink="/staff/checkin">Check-in</a>
+        <a mat-button routerLink="/staff/attendees">Attendees</a>
+        <button mat-button type="button" (click)="logout()">Sign out</button>
+      </nav>
+
       <h2>Check-in</h2>
       <div id="qr-reader" style="width: 100%"></div>
 
@@ -53,6 +61,8 @@ import type { CheckInResult } from '../../core/models/check-in.model';
   `,
 })
 export class CheckinComponent implements AfterViewInit, OnDestroy {
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
   private readonly checkin = inject(CheckinService);
   private scanner?: Html5Qrcode;
   private lastToken = '';
@@ -62,6 +72,11 @@ export class CheckinComponent implements AfterViewInit, OnDestroy {
   readonly error = signal('');
   readonly busy = signal(false);
   manualToken = '';
+
+  async logout() {
+    await this.auth.signOut();
+    await this.router.navigateByUrl('/staff/login');
+  }
 
   async ngAfterViewInit() {
     this.scanner = new Html5Qrcode('qr-reader');

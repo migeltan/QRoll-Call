@@ -1,17 +1,25 @@
 // Owner: Role 5 (Staff Auth + Check-in Scanner).
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTableModule } from '@angular/material/table';
+import { AuthService } from '../../core/auth/auth.service';
 import { Attendee, AttendeesService } from '../../core/services/attendees.service';
 
 @Component({
   selector: 'app-attendees',
-  imports: [DatePipe, MatButtonModule, MatFormFieldModule, MatInputModule, MatTableModule],
+  imports: [DatePipe, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule, MatTableModule],
   template: `
     <div style="max-width: 1000px; margin: 16px auto; padding: 0 16px">
+      <nav style="display: flex; gap: 8px; margin-bottom: 8px">
+        <a mat-button routerLink="/staff/checkin">Check-in</a>
+        <a mat-button routerLink="/staff/attendees">Attendees</a>
+        <button mat-button type="button" (click)="logout()">Sign out</button>
+      </nav>
+
       <h2>Attendees</h2>
       <p>{{ checkedIn() }} of {{ rows().length }} checked in</p>
 
@@ -62,6 +70,8 @@ import { Attendee, AttendeesService } from '../../core/services/attendees.servic
   `,
 })
 export class AttendeesComponent implements OnInit {
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
   private readonly service = inject(AttendeesService);
 
   readonly columns = ['full_name', 'email', 'organization', 'contact_number', 'status', 'checked_in_at'];
@@ -77,6 +87,11 @@ export class AttendeesComponent implements OnInit {
     );
   });
   readonly checkedIn = computed(() => this.rows().filter((r) => r.status === 'checked_in').length);
+
+  async logout() {
+    await this.auth.signOut();
+    await this.router.navigateByUrl('/staff/login');
+  }
 
   ngOnInit() {
     void this.reload();
