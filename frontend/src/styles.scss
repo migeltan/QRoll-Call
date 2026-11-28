@@ -1,23 +1,218 @@
-// Global styles + Angular Material theme. Owner: Role 4.
+// Global design tokens, tactile pastel-editorial styling, and Angular Material 22 theme.
+// Owner: Role 4 (Registration Form + App Shell).
+// Shared styles live here so every component stays well under angular.json's 4kB style budget.
 @use '@angular/material' as mat;
+
+:root {
+  // Warm cream paper, espresso ink, periwinkle-cobalt & pastel foil accents
+  --qc-paper: #faf7f2;
+  --qc-paper-soft: #f2ece1;
+  --qc-surface: #ffffff;
+  --qc-ink: #1c1917;
+  --qc-ink-muted: #57534e;
+  --qc-border: #d6cfc2;
+
+  --qc-primary: #3b5bdb;
+  --qc-primary-soft: #eef2ff;
+  --qc-peach: #f97066;
+  --qc-peach-soft: #fff1f0;
+  --qc-mint: #10b981;
+  --qc-mint-soft: #d1fae5;
+  --qc-amber: #b45309;
+  --qc-amber-soft: #fef3c7;
+  --qc-coral: #dc2626;
+  --qc-coral-soft: #fee2e2;
+
+  --qc-font-display: 'Space Grotesk', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --qc-font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --qc-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  --qc-radius-sm: 12px;
+  --qc-radius-md: 18px;
+  --qc-radius-lg: 22px;
+  --qc-shadow-pop: 4px 4px 0 var(--qc-ink);
+
+  // Align Material 3 tokens with the custom palette
+  --mat-sys-primary: var(--qc-primary);
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-surface: var(--qc-surface);
+  --mat-sys-on-surface: var(--qc-ink);
+  --mat-sys-outline: var(--qc-ink);
+  --mat-button-filled-container-color: var(--qc-primary);
+  --mat-button-filled-label-text-color: #ffffff;
+  --mat-button-filled-container-shape: 14px;
+  --mat-button-outlined-container-shape: 14px;
+}
 
 html {
   color-scheme: light;
+  scroll-behavior: smooth;
   @include mat.theme(
     (
-      color: mat.$azure-palette,
-      typography: Roboto,
+      color: (
+        primary: mat.$azure-palette,
+        tertiary: mat.$rose-palette,
+      ),
+      typography: 'Plus Jakarta Sans',
       density: 0,
     )
   );
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 html,
 body {
-  height: 100%;
+  min-height: 100%;
+  margin: 0;
 }
 
 body {
-  margin: 0;
-  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  color: var(--qc-ink);
+  font-family: var(--qc-font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  background-color: var(--qc-paper);
+  background-image:
+    radial-gradient(circle at 12% 10%, rgba(147, 197, 253, 0.24) 0%, transparent 38%),
+    radial-gradient(circle at 88% 14%, rgba(249, 168, 212, 0.2) 0%, transparent 34%),
+    radial-gradient(rgba(28, 25, 23, 0.08) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 22px 22px;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+.qc-display {
+  font-family: var(--qc-font-display);
+  letter-spacing: -0.025em;
+}
+
+.qc-mono {
+  font-family: var(--qc-font-mono);
+}
+
+:focus-visible {
+  outline: 3px solid var(--qc-primary);
+  outline-offset: 2px;
+}
+
+// Tactile card with crisp border + playful offset shadow
+.qc-card {
+  background: var(--qc-surface);
+  border: 2px solid var(--qc-ink);
+  border-radius: var(--qc-radius-lg);
+  box-shadow: var(--qc-shadow-pop);
+}
+
+// Soft pastel holographic foil strip (burn-cd keepsake touch)
+.qc-foil-strip {
+  height: 9px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #93c5fd, #f9a8d4, #fde68a, #6ee7b7, #93c5fd);
+  background-size: 200% 100%;
+  animation: qc-foil 8s linear infinite;
+}
+
+@keyframes qc-foil {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+// Perforated divider with semicircular ticket notches
+.qc-perforation {
+  position: relative;
+  border-top: 2px dashed var(--qc-border);
+  margin: 18px 0;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: -11px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--qc-paper);
+    border: 2px solid var(--qc-ink);
+  }
+
+  &::before {
+    left: -34px;
+  }
+
+  &::after {
+    right: -34px;
+  }
+}
+
+// Shared responsive grids & alerts
+.qc-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.qc-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.qc-alert {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: var(--qc-radius-sm);
+  border: 2px solid var(--qc-ink);
+  font-size: 0.9375rem;
+
+  &--warn {
+    background: var(--qc-amber-soft);
+    color: var(--qc-amber);
+  }
+
+  &--error {
+    background: var(--qc-coral-soft);
+    color: var(--qc-coral);
+  }
+
+  &--success {
+    background: var(--qc-mint-soft);
+    color: #065f46;
+  }
+}
+
+@media (max-width: 860px) {
+  .qc-hero-grid,
+  .qc-steps-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .qc-foil-strip {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
