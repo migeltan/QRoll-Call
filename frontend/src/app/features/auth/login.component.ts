@@ -3,50 +3,56 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule, MatButtonModule, MatCardModule, MatFormFieldModule, MatInputModule],
+  imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule],
   styles: [
     `
-      mat-card { max-width: 400px; margin: 32px 16px; padding: 16px; }
-      @media (min-width: 440px) { mat-card { margin: 48px auto; } }
-      form { display: grid; gap: 8px; margin-top: 16px; }
-      .hint { margin: 4px 0 0; color: #666; }
-      .error { margin: 0; color: #b00020; }
+      .wrap { max-width: 440px; margin: 24px auto; }
+      .card { padding: 24px; }
+      .eyebrow { margin-top: 14px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; color: var(--qc-ink-muted); }
+      h1 { margin: 6px 0 4px; font-size: 1.75rem; }
+      .hint { margin: 0 0 16px; color: var(--qc-ink-muted); }
+      form { display: grid; gap: 4px; margin-top: 16px; }
+      .qc-alert { margin-bottom: 8px; }
+      button[type='submit'] { height: 48px; width: 100%; font-weight: 700; }
     `,
   ],
   template: `
-    <mat-card>
-      <mat-card-title>Staff login</mat-card-title>
-      <p class="hint">For organizers and check-in staff only.</p>
-      <form [formGroup]="form" (ngSubmit)="submit()">
-        <mat-form-field>
-          <mat-label>Email</mat-label>
-          <input matInput type="email" formControlName="email" autocomplete="username" />
-          @if (form.controls.email.touched && form.controls.email.invalid) {
-            <mat-error>Enter a valid email</mat-error>
+    <div class="wrap">
+      <div class="qc-card card">
+        <div class="qc-foil-strip" aria-hidden="true"></div>
+        <div class="eyebrow qc-mono">STAFF ONLY</div>
+        <h1>Staff login</h1>
+        <p class="hint">For organizers and check-in staff. Attendees don't need an account.</p>
+        <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+          <mat-form-field appearance="outline">
+            <mat-label>Email</mat-label>
+            <input matInput type="email" formControlName="email" autocomplete="username" />
+            @if (form.controls.email.touched && form.controls.email.invalid) {
+              <mat-error>Enter a valid email.</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Password</mat-label>
+            <input matInput type="password" formControlName="password" autocomplete="current-password" />
+            @if (form.controls.password.touched && form.controls.password.invalid) {
+              <mat-error>Password is required.</mat-error>
+            }
+          </mat-form-field>
+          @if (error()) {
+            <div class="qc-alert qc-alert--error" role="alert">{{ error() }}</div>
           }
-        </mat-form-field>
-        <mat-form-field>
-          <mat-label>Password</mat-label>
-          <input matInput type="password" formControlName="password" autocomplete="current-password" />
-          @if (form.controls.password.touched && form.controls.password.invalid) {
-            <mat-error>Password is required</mat-error>
-          }
-        </mat-form-field>
-        @if (error()) {
-          <p class="error">{{ error() }}</p>
-        }
-        <button mat-flat-button type="submit" [disabled]="loading()">
-          {{ loading() ? 'Signing in…' : 'Sign in' }}
-        </button>
-      </form>
-    </mat-card>
+          <button mat-flat-button type="submit" [disabled]="loading()">
+            {{ loading() ? 'Signing in…' : 'Sign in' }}
+          </button>
+        </form>
+      </div>
+    </div>
   `,
 })
 export class LoginComponent {

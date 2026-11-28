@@ -1,53 +1,54 @@
 // Owner: Role 5 (Staff Auth + Check-in Scanner).
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTableModule } from '@angular/material/table';
-import { AuthService } from '../../core/auth/auth.service';
+import { StaffNavComponent } from '../staff/staff-nav.component';
 import { Attendee, AttendeesService } from '../../core/services/attendees.service';
 
 @Component({
   selector: 'app-attendees',
-  imports: [DatePipe, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule, MatTableModule],
+  imports: [DatePipe, StaffNavComponent, MatButtonModule, MatFormFieldModule, MatInputModule, MatTableModule],
   styles: [
     `
-      .page { max-width: 1000px; margin: 0 auto; padding: 16px; }
-      .nav { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+      .page { max-width: 1000px; margin: 0 auto; }
+      h1 { margin: 0; font-size: 1.75rem; }
+      .summary { margin: 4px 0 16px; color: var(--qc-ink-muted); }
       .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
       .toolbar mat-form-field { flex: 1 1 240px; }
-      .scroll { overflow-x: auto; }
-      table { width: 100%; min-width: 720px; }
-      .error { color: #b00020; }
-      .muted { color: #666; padding: 24px 0; text-align: center; }
+      .toolbar button { height: 48px; margin-bottom: 22px; }
+      .qc-alert { margin-bottom: 12px; }
+      .muted { padding: 24px 0; text-align: center; color: var(--qc-ink-muted); }
+      .scroll { overflow-x: auto; padding: 4px; }
+      table { width: 100%; min-width: 720px; background: transparent; }
+      th { font-weight: 700; color: var(--qc-ink); }
+      .pill { display: inline-block; white-space: nowrap; padding: 2px 10px; border-radius: 999px; border: 1.5px solid var(--qc-ink); font-size: 0.8125rem; font-weight: 600; }
+      .pill.in { background: var(--qc-mint-soft); }
+      .pill.reg { background: var(--qc-paper-soft); }
     `,
   ],
   template: `
     <div class="page">
-      <nav class="nav">
-        <a mat-button routerLink="/staff/checkin">Check-in</a>
-        <a mat-button routerLink="/staff/attendees">Attendees</a>
-        <button mat-button type="button" (click)="logout()">Sign out</button>
-      </nav>
+      <app-staff-nav />
 
-      <h2>Attendees</h2>
-      <p>{{ checkedIn() }} of {{ rows().length }} checked in</p>
+      <h1>Attendees</h1>
+      <p class="summary qc-mono">{{ checkedIn() }} of {{ rows().length }} checked in</p>
 
       <div class="toolbar">
-        <mat-form-field>
+        <mat-form-field appearance="outline">
           <mat-label>Search name, email or organization</mat-label>
           <input matInput [value]="query()" (input)="query.set($any($event.target).value)" />
         </mat-form-field>
         <button mat-stroked-button type="button" (click)="reload()" [disabled]="loading()">Refresh</button>
         <button mat-flat-button type="button" (click)="exportCsv()" [disabled]="!rows().length">
-          Export CSV
+          Export CSV (all)
         </button>
       </div>
 
       @if (error()) {
-        <p class="error">{{ error() }}</p>
+        <div class="qc-alert qc-alert--error" role="alert">{{ error() }}</div>
       }
 
       @if (loading()) {
@@ -57,7 +58,7 @@ import { Attendee, AttendeesService } from '../../core/services/attendees.servic
       } @else if (!filtered().length) {
         <p class="muted">No attendees match your search.</p>
       } @else {
-        <div class="scroll">
+        <div class="qc-card scroll">
           <table mat-table [dataSource]="filtered()">
             <ng-container matColumnDef="full_name">
               <th mat-header-cell *matHeaderCellDef>Name</th>
@@ -77,7 +78,9 @@ import { Attendee, AttendeesService } from '../../core/services/attendees.servic
             </ng-container>
             <ng-container matColumnDef="status">
               <th mat-header-cell *matHeaderCellDef>Status</th>
-              <td mat-cell *matCellDef="let r">{{ r.status === 'checked_in' ? 'Checked In' : 'Registered' }}</td>
+              <td mat-cell *matCellDef="let r">
+                <span class="pill" [class.in]="r.status === 'checked_in'" [class.reg]="r.status !== 'checked_in'">{{ r.status === 'checked_in' ? 'Checked In' : 'Registered' }}</span>
+              </td>
             </ng-container>
             <ng-container matColumnDef="checked_in_at">
               <th mat-header-cell *matHeaderCellDef>Checked in at</th>
@@ -92,8 +95,6 @@ import { Attendee, AttendeesService } from '../../core/services/attendees.servic
   `,
 })
 export class AttendeesComponent implements OnInit {
-  private readonly auth = inject(AuthService);
-  private readonly router = inject(Router);
   private readonly service = inject(AttendeesService);
 
   readonly columns = ['full_name', 'email', 'organization', 'contact_number', 'status', 'checked_in_at'];
@@ -110,11 +111,6 @@ export class AttendeesComponent implements OnInit {
     );
   });
   readonly checkedIn = computed(() => this.rows().filter((r) => r.status === 'checked_in').length);
-
-  async logout() {
-    await this.auth.signOut();
-    await this.router.navigateByUrl('/staff/login');
-  }
 
   ngOnInit() {
     void this.reload();
@@ -140,6 +136,6 @@ export class AttendeesComponent implements OnInit {
     a.href = url;
     a.download = 'attendees.csv';
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 }

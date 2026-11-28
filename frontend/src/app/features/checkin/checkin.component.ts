@@ -2,100 +2,104 @@
 import { AfterViewInit, Component, OnDestroy, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
 import { Html5Qrcode } from 'html5-qrcode';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { AuthService } from '../../core/auth/auth.service';
+import { StaffNavComponent } from '../staff/staff-nav.component';
 import { CheckinService } from '../../core/services/checkin.service';
 import type { CheckInResult } from '../../core/models/check-in.model';
 
 @Component({
   selector: 'app-checkin',
-  imports: [FormsModule, DatePipe, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule],
+  imports: [FormsModule, DatePipe, StaffNavComponent, MatButtonModule, MatFormFieldModule, MatInputModule],
   styles: [
     `
-      .page { max-width: 480px; margin: 0 auto; padding: 16px; }
-      .nav { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
-      .reader { width: 100%; min-height: 80px; border-radius: 8px; overflow: hidden; }
-      .notice { margin: 12px 0; padding: 12px; border-radius: 8px; background: #fff3e0; color: #7a4a00; }
-      .error { margin: 12px 0; color: #b00020; }
-      .busy { margin: 12px 0; font-weight: 500; }
-      .result { margin: 16px 0; padding: 16px; border-radius: 8px; color: #fff; }
-      .result h3 { margin: 0 0 4px; font-size: 1.4rem; }
+      .page { max-width: 520px; margin: 0 auto; }
+      h1 { margin: 0 0 12px; font-size: 1.75rem; }
+      .reader { width: 100%; min-height: 80px; overflow: hidden; border-radius: var(--qc-radius-md); }
+      .frame { padding: 8px; margin-bottom: 16px; }
+      .qc-alert { margin: 0 0 12px; }
+      .busy { margin: 0 0 12px; font-weight: 600; }
+      .result { margin: 0 0 16px; padding: 18px; color: var(--qc-ink); }
+      .result h2 { margin: 0 0 4px; font-size: 1.5rem; }
       .result p { margin: 2px 0; }
-      .ok { background: #2e7d32; }
-      .dup { background: #c25e00; }
-      .bad { background: #c62828; }
-      .result button { margin-top: 12px; }
+      .result button { margin-top: 12px; background: var(--qc-surface); }
+      .ok { background: var(--qc-mint-soft); }
+      .dup { background: var(--qc-amber-soft); }
+      .bad { background: var(--qc-coral-soft); }
+      .manual-card { padding: 16px; }
+      .manual-card p { margin: 0 0 8px; color: var(--qc-ink-muted); }
       .manual { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
       .manual mat-form-field { flex: 1 1 200px; }
+      .manual button { height: 56px; }
     `,
   ],
   template: `
     <div class="page">
-      <nav class="nav">
-        <a mat-button routerLink="/staff/checkin">Check-in</a>
-        <a mat-button routerLink="/staff/attendees">Attendees</a>
-        <button mat-button type="button" (click)="logout()">Sign out</button>
-      </nav>
-
-      <h2>Check-in</h2>
+      <app-staff-nav />
+      <h1>Check-in</h1>
 
       @if (offline()) {
-        <p class="notice">
+        <div class="qc-alert qc-alert--warn" role="alert">
           You're offline. Check-ins won't work until the connection is back. Use the exported
           attendee list as a backup.
-        </p>
+        </div>
       }
-
-      <div id="qr-reader" class="reader"></div>
 
       @if (busy()) {
-        <p class="busy">Checking…</p>
+        <p class="busy" aria-live="polite">Checking…</p>
       }
       @if (error()) {
-        <p class="error">{{ error() }}</p>
+        <div class="qc-alert qc-alert--error" role="alert">{{ error() }}</div>
       }
 
+      <!-- Result sits above the camera so staff never miss it on a phone. -->
       @if (result(); as r) {
-        <div class="result" [class.ok]="r.status === 'checked_in'" [class.dup]="r.status === 'already_checked_in'" [class.bad]="r.status === 'invalid_token'">
+        <div
+          class="qc-card result"
+          role="status"
+          [class.ok]="r.status === 'checked_in'"
+          [class.dup]="r.status === 'already_checked_in'"
+          [class.bad]="r.status === 'invalid_token'"
+        >
           @switch (r.status) {
             @case ('checked_in') {
-              <h3>Checked In</h3>
+              <h2>Checked In</h2>
               <p>{{ r.attendee?.full_name }} · {{ r.attendee?.organization }}</p>
             }
             @case ('already_checked_in') {
-              <h3>Already checked in</h3>
+              <h2>Already checked in</h2>
               <p>{{ r.attendee?.full_name }} · {{ r.attendee?.organization }}</p>
               <p>First scanned: {{ r.attendee?.checked_in_at | date: 'medium' }}</p>
             }
             @case ('invalid_token') {
-              <h3>Invalid QR code</h3>
+              <h2>Invalid QR code</h2>
               <p>No attendee matches this code.</p>
             }
           }
-          <button mat-stroked-button type="button" style="color: #fff; border-color: #fff" (click)="result.set(null)">
-            Scan next
-          </button>
+          <button mat-stroked-button type="button" (click)="result.set(null)">Scan next</button>
         </div>
       }
 
-      <p>No camera? Type the token, or use a USB scanner:</p>
-      <form class="manual" (ngSubmit)="submitManual()">
-        <mat-form-field>
-          <mat-label>Token</mat-label>
-          <input matInput name="token" [(ngModel)]="manualToken" autocomplete="off" />
-        </mat-form-field>
-        <button mat-flat-button type="submit" [disabled]="busy()">Check in</button>
-      </form>
+      <div class="qc-card frame">
+        <div id="qr-reader" class="reader"></div>
+      </div>
+
+      <div class="qc-card manual-card">
+        <p>No camera? Type the token, or use a USB scanner.</p>
+        <form class="manual" (ngSubmit)="submitManual()">
+          <mat-form-field appearance="outline">
+            <mat-label>Token</mat-label>
+            <input matInput name="token" [(ngModel)]="manualToken" autocomplete="off" />
+          </mat-form-field>
+          <button mat-flat-button type="submit" [disabled]="busy()">Check in</button>
+        </form>
+      </div>
     </div>
   `,
 })
 export class CheckinComponent implements AfterViewInit, OnDestroy {
-  private readonly auth = inject(AuthService);
-  private readonly router = inject(Router);
   private readonly checkin = inject(CheckinService);
   private scanner?: Html5Qrcode;
   private lastToken = '';
@@ -110,11 +114,6 @@ export class CheckinComponent implements AfterViewInit, OnDestroy {
   private readonly onOnline = () => this.offline.set(false);
   private readonly onOffline = () => this.offline.set(true);
 
-  async logout() {
-    await this.auth.signOut();
-    await this.router.navigateByUrl('/staff/login');
-  }
-
   async ngAfterViewInit() {
     window.addEventListener('online', this.onOnline);
     window.addEventListener('offline', this.onOffline);
@@ -122,7 +121,13 @@ export class CheckinComponent implements AfterViewInit, OnDestroy {
     try {
       await this.scanner.start(
         { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
+        {
+          fps: 10,
+          qrbox: (w, h) => {
+            const side = Math.floor(Math.min(w, h) * 0.7);
+            return { width: side, height: side };
+          },
+        },
         (text) => void this.handle(text),
         () => {},
       );
