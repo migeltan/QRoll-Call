@@ -18,5 +18,15 @@ export const STAFF_ROUTES: Routes = [
     loadComponent: () =>
       import('../attendees/attendees.component').then((m) => m.AttendeesComponent),
   },
+  {
+    path: 'events',
+    canActivate: [authGuard],
+    loadComponent: () => import('./events/events.component').then((m) => m.EventsComponent),
+  },
+  {
+    path: 'events/new',
+    canActivate: [authGuard],
+    loadComponent: () => import('./events/event-new.component').then((m) => m.EventNewComponent),
+  },
   { path: '', pathMatch: 'full', redirectTo: 'checkin' },
 ];

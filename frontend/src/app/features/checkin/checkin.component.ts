@@ -61,17 +61,23 @@ import type { CheckInResult } from '../../core/models/check-in.model';
           role="status"
           [class.ok]="r.status === 'checked_in'"
           [class.dup]="r.status === 'already_checked_in'"
-          [class.bad]="r.status === 'invalid_token'"
+          [class.bad]="r.status === 'invalid_token' || r.status === 'expired_token'"
         >
           @switch (r.status) {
             @case ('checked_in') {
               <h2>Checked In</h2>
-              <p>{{ r.attendee?.full_name }} · {{ r.attendee?.organization }}</p>
+              <p>{{ r.attendee?.name }} · {{ r.attendee?.organization }}</p>
+              @if (r.event_title) { <p class="qc-mono">{{ r.event_title }}</p> }
             }
             @case ('already_checked_in') {
               <h2>Already checked in</h2>
-              <p>{{ r.attendee?.full_name }} · {{ r.attendee?.organization }}</p>
+              <p>{{ r.attendee?.name }} · {{ r.attendee?.organization }}</p>
               <p>First scanned: {{ r.attendee?.checked_in_at | date: 'medium' }}</p>
+            }
+            @case ('expired_token') {
+              <h2>Pass expired</h2>
+              <p>{{ r.attendee?.name }} · {{ r.attendee?.organization }}</p>
+              @if (r.expires_at) { <p>Valid until {{ r.expires_at | date: 'medium' }}</p> }
             }
             @case ('invalid_token') {
               <h2>Invalid QR code</h2>

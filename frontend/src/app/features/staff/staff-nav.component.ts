@@ -22,6 +22,7 @@ import { AuthService } from '../../core/auth/auth.service';
   template: `
     <nav aria-label="Staff navigation">
       <a routerLink="/staff/checkin" routerLinkActive="is-active">Check-in</a>
+      <a routerLink="/staff/events" routerLinkActive="is-active">Events</a>
       <a routerLink="/staff/attendees" routerLinkActive="is-active">Attendees</a>
       <button type="button" (click)="logout()">Sign out</button>
     </nav>
