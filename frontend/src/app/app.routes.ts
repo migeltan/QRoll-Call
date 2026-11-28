@@ -1,7 +1,5 @@
 // Pre-wired by the Lead. Owner: Role 4.
-// Each role works inside its own lazy-loaded route file, so nobody needs to edit this file:
-//   - attendees (public)  -> features/register/register.routes.ts   (Role 4)
-//   - staff (login, scan, list) -> features/staff/staff.routes.ts    (Role 5)
+// Public registration routes live at '' and Role 5's staff routes mount at 'staff'.
 import { Routes } from '@angular/router';
 import { LayoutComponent } from './shared/layout/layout.component';
 
