@@ -1,6 +1,6 @@
 create table public.staff_profiles (
     user_id uuid primary key references auth.users (id) on delete cascade,
-    role    text not null defau;t 'staff' check (role in ('staff',
+    role    text not null default 'staff' check (role in ('staff',
     'organizer'))
 );
 
