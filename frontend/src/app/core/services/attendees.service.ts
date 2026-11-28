@@ -3,7 +3,9 @@ import { Injectable } from '@angular/core';
 import type { Database } from '../models/database.types';
 import { supabase } from '../supabase/supabase.client';
 
-export type Attendee = Database['public']['Tables']['attendees']['Row'];
+// event_id is added by the events migration. It is optional here so this file still compiles
+// before database.types.ts is regenerated (older rows have no event).
+export type Attendee = Database['public']['Tables']['attendees']['Row'] & { event_id?: string | null };
 
 @Injectable({ providedIn: 'root' })
 export class AttendeesService {
@@ -14,14 +16,17 @@ export class AttendeesService {
       .select('*')
       .order('created_at', { ascending: false });
     if (error) throw error;
-    return data ?? [];
+    return (data ?? []) as Attendee[];
   }
 
-  /** CSV text for the export button (also the offline backup list on event day). */
-  toCsv(attendees: Attendee[]): string {
-    const header = ['Full name', 'Email', 'Organization', 'Contact number', 'Status', 'Checked in at'];
+  /**
+   * CSV text for the export button (also the offline backup list on event day).
+   * `titleOf` turns an event id into its title for the Event column.
+   */
+  toCsv(attendees: Attendee[], titleOf: (eventId: string | null | undefined) => string = () => ''): string {
+    const header = ['Event', 'Full name', 'Email', 'Organization', 'Contact number', 'Status', 'Checked in at'];
     const lines = attendees.map((a) =>
-      [a.full_name, a.email, a.organization, a.contact_number, a.status, a.checked_in_at ?? '']
+      [titleOf(a.event_id), a.full_name, a.email, a.organization, a.contact_number, a.status, a.checked_in_at ?? '']
         .map((v) => this.cell(String(v)))
         .join(','),
     );

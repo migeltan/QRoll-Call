@@ -2,6 +2,7 @@
 // Owner: Role 4 (Registration Form + App Shell).
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { concat, debounceTime, distinctUntilChanged, from, map, of, switchMap } from 'rxjs';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,7 +12,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import {
   DuplicateRegistrationError,
   RegistrationService,
+  type PublicEvent,
 } from '../../core/services/registration.service';
+import { describeExpiry, formatPH } from '../../shared/expiry';
 import { TicketStubComponent } from '../../shared/ticket/ticket-stub.component';
 
 export interface RegisteredState {
@@ -19,6 +22,24 @@ export interface RegisteredState {
   fullName: string;
   email: string;
   organization: string;
+  /** Events: shown on the confirmation page so the attendee knows when the pass stops working. */
+  eventTitle?: string;
+  expiresAt?: string;
+}
+
+const EVENT_CODE_RE = /^QR-[A-Za-z0-9]{6}$/i;
+
+type LookupState =
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'missing' }
+  | { kind: 'error' }
+  | { kind: 'found'; event: PublicEvent };
+
+interface LookupMessage {
+  tone: 'info' | 'success' | 'warn' | 'error';
+  title: string;
+  text: string;
 }
 
 @Component({
@@ -88,6 +109,41 @@ export interface RegisteredState {
 
         <form [formGroup]="form" (ngSubmit)="onSubmit()" class="reg-form" novalidate>
           <mat-form-field appearance="outline">
+            <mat-label>Event Code</mat-label>
+            <input
+              matInput
+              formControlName="eventCode"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              placeholder="QR-7K2M9X"
+            />
+            <mat-hint>Ask your organizer for the event code.</mat-hint>
+            @if (form.controls.eventCode.hasError('required')) {
+              <mat-error>Event code is required.</mat-error>
+            } @else if (form.controls.eventCode.hasError('pattern')) {
+              <mat-error>Event codes look like QR-7K2M9X.</mat-error>
+            }
+          </mat-form-field>
+
+          @if (lookupMessage(); as m) {
+            <div
+              class="qc-alert"
+              [class.qc-alert--success]="m.tone === 'success'"
+              [class.qc-alert--warn]="m.tone === 'warn'"
+              [class.qc-alert--error]="m.tone === 'error'"
+              role="status"
+            >
+              <div>
+                <strong>{{ m.title }}</strong>
+                @if (m.text) {
+                  <p class="muted-copy">{{ m.text }}</p>
+                }
+              </div>
+            </div>
+          }
+
+          <mat-form-field appearance="outline">
             <mat-label>Full Name</mat-label>
             <input
               matInput
@@ -128,6 +184,9 @@ export interface RegisteredState {
               autocomplete="organization"
               placeholder="School, company, or community"
             />
+            @if (acceptedOrgs()) {
+              <mat-hint>This event accepts: {{ acceptedOrgs() }}</mat-hint>
+            }
             @if (form.controls.organization.hasError('required')) {
               <mat-error>Organization is required.</mat-error>
             } @else if (form.controls.organization.hasError('minlength')) {
@@ -341,6 +400,7 @@ export class RegisterComponent {
   private readonly router = inject(Router);
 
   protected readonly form = this.fb.group({
+    eventCode: ['', [Validators.required, Validators.pattern(EVENT_CODE_RE)]],
     fullName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
     email: ['', [Validators.required, Validators.email, Validators.maxLength(160)]],
     organization: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
@@ -363,12 +423,103 @@ export class RegisterComponent {
 
   protected readonly formReady = computed(() => this.formStatus() === 'VALID');
 
+  // Looks the event up (after a short pause in typing) so the attendee sees its title and how
+  // long the QR pass will be valid BEFORE submitting.
+  protected readonly lookup = toSignal(
+    this.form.controls.eventCode.valueChanges.pipe(
+      map((value) => value.trim().toUpperCase()),
+      debounceTime(400),
+      distinctUntilChanged(),
+      switchMap((code) =>
+        EVENT_CODE_RE.test(code)
+          ? concat(of<LookupState>({ kind: 'loading' }), from(this.fetchEvent(code)))
+          : of<LookupState>({ kind: 'idle' }),
+      ),
+    ),
+    { initialValue: { kind: 'idle' } as LookupState },
+  );
+
+  protected readonly event = computed(() => {
+    const state = this.lookup();
+    return state.kind === 'found' ? state.event : null;
+  });
+
+  protected readonly acceptedOrgs = computed(
+    () => this.event()?.accepted_organizations.join(', ') ?? '',
+  );
+
+  protected readonly lookupMessage = computed<LookupMessage | null>(() => {
+    const state = this.lookup();
+    switch (state.kind) {
+      case 'idle':
+        return null;
+      case 'loading':
+        return { tone: 'info', title: 'Checking the event code…', text: '' };
+      case 'missing':
+        return {
+          tone: 'error',
+          title: 'Event not found',
+          text: "We couldn't find that event code. Check it with your organizer.",
+        };
+      case 'error':
+        return {
+          tone: 'warn',
+          title: "Couldn't check the code",
+          text: 'Could not check the event code. Please try again.',
+        };
+      case 'found': {
+        const ev = state.event;
+        if (!ev.is_open) {
+          return {
+            tone: 'error',
+            title: ev.is_full ? 'This event is full' : 'This event has ended',
+            text: ev.is_full
+              ? 'No more QR passes are being issued for this event.'
+              : 'This event has ended, so its code no longer works.',
+          };
+        }
+        // The warning about how long the QR pass will be accepted.
+        const left = describeExpiry(ev.expires_at);
+        const when = formatPH(ev.expires_at);
+        return left.level === 'soon'
+          ? {
+              tone: 'warn',
+              title: ev.title,
+              text: `Heads up: your QR pass ${left.text.toLowerCase()}, at ${when}. It works once.`,
+            }
+          : {
+              tone: 'success',
+              title: ev.title,
+              text: `Your QR pass will be valid until ${when} (${left.text.replace('Valid for ', '')}). It works once.`,
+            };
+      }
+    }
+  });
+
+  private async fetchEvent(code: string): Promise<LookupState> {
+    try {
+      const event = await this.registrationService.getEvent(code);
+      return event ? { kind: 'found', event } : { kind: 'missing' };
+    } catch {
+      return { kind: 'error' };
+    }
+  }
+
   protected async onSubmit(): Promise<void> {
     this.duplicateEmailError.set(null);
     this.genericError.set(null);
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      return;
+    }
+
+    // The code was already looked up and is closed or full: say so instead of sending it.
+    const known = this.lookup();
+    if (known.kind === 'found' && !known.event.is_open) {
+      this.genericError.set(
+        known.event.is_full ? 'This event is full.' : 'This event has ended, so its code no longer works.',
+      );
       return;
     }
 
@@ -382,6 +533,8 @@ export class RegisterComponent {
         fullName: input.fullName.trim(),
         email: input.email.trim().toLowerCase(),
         organization: input.organization.trim(),
+        eventTitle: this.event()?.title,
+        expiresAt: this.event()?.expires_at,
       };
       await this.router.navigate(['/registered'], { state });
     } catch (err) {

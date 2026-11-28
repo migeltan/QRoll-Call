@@ -4,6 +4,7 @@ import { Component, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { TicketStubComponent } from '../../shared/ticket/ticket-stub.component';
+import { formatPH } from '../../shared/expiry';
 import type { RegisteredState } from './register.component';
 
 function readRegisteredState(raw: unknown): RegisteredState | null {
@@ -22,6 +23,8 @@ function readRegisteredState(raw: unknown): RegisteredState | null {
       fullName: record['fullName'],
       email: record['email'],
       organization: record['organization'],
+      eventTitle: typeof record['eventTitle'] === 'string' ? record['eventTitle'] : undefined,
+      expiresAt: typeof record['expiresAt'] === 'string' ? record['expiresAt'] : undefined,
     };
   }
   return null;
@@ -38,6 +41,9 @@ function readRegisteredState(raw: unknown): RegisteredState | null {
         <p>
           Your registration is confirmed and your unique ticket email is on its way.
         </p>
+        @if (state?.eventTitle) {
+          <p><strong>{{ state?.eventTitle }}</strong></p>
+        }
       </div>
 
       @if (state) {
@@ -63,6 +69,9 @@ function readRegisteredState(raw: unknown): RegisteredState | null {
           <li>Check your inbox (and spam/promotions folder) if you don't see it within a minute.</li>
           <li>Save a screenshot of the QR code so it loads cleanly even on spotty venue Wi-Fi.</li>
           <li>Each pass validates once — show it to check-in staff at the entrance.</li>
+          @if (validUntil) {
+            <li>Your pass is only valid until {{ validUntil }} (Philippine time). After that it won't be accepted.</li>
+          }
         </ul>
 
         <div class="confirm-actions">
@@ -136,4 +145,5 @@ export class RegisteredComponent {
       this.router.lastSuccessfulNavigation()?.extras.state ??
       (typeof window !== 'undefined' ? window.history.state : undefined),
   );
+  protected readonly validUntil = this.state?.expiresAt ? formatPH(this.state.expiresAt) : null;
 }

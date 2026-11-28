@@ -4,16 +4,27 @@ import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { StaffNavComponent } from '../staff/staff-nav.component';
+import type { EventRow } from '../staff/events/event.model';
+import { EventsService } from '../staff/events/events.service';
 import { Attendee, AttendeesService } from '../../core/services/attendees.service';
 
 @Component({
   selector: 'app-attendees',
-  imports: [DatePipe, StaffNavComponent, MatButtonModule, MatFormFieldModule, MatInputModule, MatTableModule],
+  imports: [
+    DatePipe,
+    StaffNavComponent,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatTableModule,
+  ],
   styles: [
     `
-      .page { max-width: 1000px; margin: 0 auto; }
+      .page { max-width: 1100px; margin: 0 auto; }
       h1 { margin: 0; font-size: 1.75rem; }
       .summary { margin: 4px 0 16px; color: var(--qc-ink-muted); }
       .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -22,7 +33,7 @@ import { Attendee, AttendeesService } from '../../core/services/attendees.servic
       .qc-alert { margin-bottom: 12px; }
       .muted { padding: 24px 0; text-align: center; color: var(--qc-ink-muted); }
       .scroll { overflow-x: auto; padding: 4px; }
-      table { width: 100%; min-width: 720px; background: transparent; }
+      table { width: 100%; min-width: 860px; background: transparent; }
       th { font-weight: 700; color: var(--qc-ink); }
       .pill { display: inline-block; white-space: nowrap; padding: 2px 10px; border-radius: 999px; border: 1.5px solid var(--qc-ink); font-size: 0.8125rem; font-weight: 600; }
       .pill.in { background: var(--qc-mint-soft); }
@@ -34,16 +45,27 @@ import { Attendee, AttendeesService } from '../../core/services/attendees.servic
       <app-staff-nav />
 
       <h1>Attendees</h1>
-      <p class="summary qc-mono">{{ checkedIn() }} of {{ rows().length }} checked in</p>
+      <p class="summary qc-mono">{{ checkedIn() }} of {{ byEvent().length }} checked in{{ eventLabel() }}</p>
 
       <div class="toolbar">
+        @if (events().length) {
+          <mat-form-field appearance="outline">
+            <mat-label>Event</mat-label>
+            <mat-select [value]="eventId()" (selectionChange)="eventId.set($event.value)">
+              <mat-option value="">All events</mat-option>
+              @for (e of events(); track e.id) {
+                <mat-option [value]="e.id">{{ e.title }} ({{ e.code }})</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
         <mat-form-field appearance="outline">
           <mat-label>Search name, email or organization</mat-label>
           <input matInput [value]="query()" (input)="query.set($any($event.target).value)" />
         </mat-form-field>
         <button mat-stroked-button type="button" (click)="reload()" [disabled]="loading()">Refresh</button>
-        <button mat-flat-button type="button" (click)="exportCsv()" [disabled]="!rows().length">
-          Export CSV (all)
+        <button mat-flat-button type="button" (click)="exportCsv()" [disabled]="!byEvent().length">
+          {{ eventId() ? 'Export CSV (this event)' : 'Export CSV (all)' }}
         </button>
       </div>
 
@@ -53,13 +75,17 @@ import { Attendee, AttendeesService } from '../../core/services/attendees.servic
 
       @if (loading()) {
         <p class="muted">Loading attendees…</p>
-      } @else if (!rows().length && !error()) {
-        <p class="muted">No attendees have registered yet.</p>
+      } @else if (!byEvent().length && !error()) {
+        <p class="muted">{{ eventId() ? 'No one has registered for this event yet.' : 'No attendees have registered yet.' }}</p>
       } @else if (!filtered().length) {
         <p class="muted">No attendees match your search.</p>
       } @else {
         <div class="qc-card scroll">
           <table mat-table [dataSource]="filtered()">
+            <ng-container matColumnDef="event">
+              <th mat-header-cell *matHeaderCellDef>Event</th>
+              <td mat-cell *matCellDef="let r">{{ titleOf(r.event_id) || '—' }}</td>
+            </ng-container>
             <ng-container matColumnDef="full_name">
               <th mat-header-cell *matHeaderCellDef>Name</th>
               <td mat-cell *matCellDef="let r">{{ r.full_name }}</td>
@@ -96,25 +122,41 @@ import { Attendee, AttendeesService } from '../../core/services/attendees.servic
 })
 export class AttendeesComponent implements OnInit {
   private readonly service = inject(AttendeesService);
+  private readonly eventsService = inject(EventsService);
 
-  readonly columns = ['full_name', 'email', 'organization', 'contact_number', 'status', 'checked_in_at'];
+  readonly columns = ['event', 'full_name', 'email', 'organization', 'contact_number', 'status', 'checked_in_at'];
   readonly rows = signal<Attendee[]>([]);
+  readonly events = signal<EventRow[]>([]);
+  readonly eventId = signal(''); // '' = all events
   readonly query = signal('');
   readonly error = signal('');
   readonly loading = signal(false);
 
+  /** Everyone in the selected event (all events when none is selected). */
+  readonly byEvent = computed(() => {
+    const id = this.eventId();
+    return id ? this.rows().filter((r) => r.event_id === id) : this.rows();
+  });
+
+  /** The selected event's attendees, narrowed by the search box. */
   readonly filtered = computed(() => {
     const q = this.query().trim().toLowerCase();
-    if (!q) return this.rows();
-    return this.rows().filter((r) =>
+    if (!q) return this.byEvent();
+    return this.byEvent().filter((r) =>
       [r.full_name, r.email, r.organization].some((v) => v.toLowerCase().includes(q)),
     );
   });
-  readonly checkedIn = computed(() => this.rows().filter((r) => r.status === 'checked_in').length);
+  readonly checkedIn = computed(() => this.byEvent().filter((r) => r.status === 'checked_in').length);
+  readonly eventLabel = computed(() => {
+    const e = this.events().find((x) => x.id === this.eventId());
+    return e ? ` · ${e.title}` : '';
+  });
 
   ngOnInit() {
     void this.reload();
   }
+
+  titleOf = (id: string | null | undefined): string => this.events().find((e) => e.id === id)?.title ?? '';
 
   async reload() {
     this.error.set('');
@@ -126,15 +168,23 @@ export class AttendeesComponent implements OnInit {
     } finally {
       this.loading.set(false);
     }
+    // The event list is optional: if the events migration isn't applied yet, the page still works.
+    try {
+      this.events.set(await this.eventsService.list());
+    } catch {
+      this.events.set([]);
+    }
   }
 
+  /** Exports the selected event (or everyone). Ignores the search box so the backup is complete. */
   exportCsv() {
-    const csv = this.service.toCsv(this.rows());
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    const csv = this.service.toCsv(this.byEvent(), this.titleOf);
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
+    const code = this.events().find((e) => e.id === this.eventId())?.code ?? 'all-events';
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'attendees.csv';
+    a.download = `attendees-${code}.csv`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
