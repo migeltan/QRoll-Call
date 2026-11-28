@@ -9,7 +9,9 @@
 -- HOSTED PROJECT: do NOT rely on this migration. After deploying the function, run
 -- the hosted SQL from the PR description in the hosted SQL editor. It uses the same
 -- trigger name, so it replaces this one instead of creating a duplicate.
-
+-- pg_net sends the webhook request. Hosted projects enable it automatically when
+-- Database Webhooks are on, but a local reset needs it created explicitly.
+create extension if not exists pg_net;
 drop trigger if exists send_ticket_on_insert on public.attendees;
 
 create trigger send_ticket_on_insert
